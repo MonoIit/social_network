@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Авторизация</h1>
+<form action="/login" method="post" class="form-contact">
+    <p><label>Имя пользователя:</label><input type="text" name="username" value=""></p>
+    <p><label>Пароль:</label><input type="password" name="password" value=""></p>
+    <p><input type="submit" value="Войти">{% for e in get_flashed_messages() %}{{e}}{% endfor %}</p>
+    <a href="registration">Регистрация</a>
+</form>
+{% endblock %}

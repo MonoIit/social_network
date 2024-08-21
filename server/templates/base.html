@@ -1,0 +1,57 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>{{ title }}</title>
+    <link type="text/css" href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<table class="table-page" border=0 cellpadding="0" cellspacing="0">
+<tr><td valign=top>
+    <div class="header">
+        <ul id="mainmenu" class="mainmenu">
+            <li class="logo"><a href="#">
+                <div class="logo"></div>
+            </a></li>
+            {% for m in menu %}
+            {% if m.title != "Войти" %}
+            <li>
+                {% else %}
+            <li class="last">
+                {% endif %}
+                <a href="{{m.url}}">{{m.title}}</a></li>
+            {% endfor %}
+        </ul>
+        <div class="clear"></div>
+    </div>
+
+    <table class="table-content" border=0 cellpadding="0" cellspacing="0">
+        <tr>
+            <!-- Sidebar слева -->
+            <td valign="top" class="left-chapters">
+                <ul id="leftchapters">
+                    {% for s in side_menu %}
+                    <li>
+                        <a href="{{s.url}}">{{s.title}}</a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </td>
+<td valign="top" class="content">
+   <!-- Хлебные крошки -->
+   {% block breadcrumbs %}
+   {% endblock %}
+
+<div class="content-text">
+    {% block content %}
+    {% endblock %}
+</div>
+
+
+</td></tr></table>
+</td>
+</body>
+</html>
