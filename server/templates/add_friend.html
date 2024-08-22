@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form action="/add_friend" method="post">
+    <p><input type="text" class="input-field" name="username" placeholder="Search friend..."></p>
+    <p><input type="submit" value="Найти"></p>
+</form>
+{% for msg in get_flashed_messages() %}
+{{msg}}
+{% endfor %}
+<ul>
+{% for user in users %}
+<li>{{user.username}}</li>
+{% endfor %}
+</ul>
+{% endblock %}

@@ -2,5 +2,7 @@ import os
 
 class Config:
     SECRET_KEY = '1234'
-    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://postgres:1337@localhost/sn')
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DB_HOST = '127.0.0.1'
+    DB_NAME = 'sn'
+    DB_USER = 'postgres'
+    DB_PASSWORD = '1337'

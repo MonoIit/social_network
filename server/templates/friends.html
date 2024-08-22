@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<a href="add_friend">Найти друга</a>
+<form>
+    <input type="text" class="input-field" placeholder="Search friend...">
+</form>
+
+<ul>
+    {% for friend in friends %}
+    <li>{{friend.username}}</li>
+    {% endfor %}
+</ul>
+{% endblock %}

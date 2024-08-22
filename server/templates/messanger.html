@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div id="chat"></div>
+    <input id="message" type="text" placeholder="Enter message...">
+    <button id="send">Send</button>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        var socket = io();
+
+        socket.on('message', function(msg) {
+            var chat = document.getElementById('chat');
+            var p = document.createElement('p');
+            p.innerHTML = msg;
+            chat.appendChild(p);
+        });
+
+        document.getElementById('send').onclick = function() {
+            var msg = document.getElementById('message').value;
+            socket.send(msg);
+            document.getElementById('message').value = '';
+        };
+    </script>
+{% endblock %}
