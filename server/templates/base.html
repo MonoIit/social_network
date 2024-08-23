@@ -17,13 +17,17 @@
                 <div class="logo"></div>
             </a></li>
             {% for m in menu %}
-            {% if m.title != "Войти" %}
             <li>
-                {% else %}
-            <li class="last">
-                {% endif %}
-                <a href="{{m.url}}">{{m.title}}</a></li>
+                <a href="{{ url_for('main.' + m.url) }}">{{m.title}}</a>
+            </li>
             {% endfor %}
+            <li class="last">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('main.profile', user_id=current_user.get_id()) }}">{{ current_user.get_username() }}</a> | <a href="{{ url_for('main.logout') }}">Выйти</a>
+            {% else %}
+                <a href="{{ url_for('main.registration') }}">Зарегистрироваться</a> | <a href="{{ url_for('main.login') }}">Войти</a>
+            {% endif %}
+            </li>
         </ul>
         <div class="clear"></div>
     </div>
@@ -35,7 +39,7 @@
                 <ul id="leftchapters">
                     {% for s in side_menu %}
                     <li>
-                        <a href="{{s.url}}">{{s.title}}</a>
+                        <a href="{{ url_for('main.' + s.url) }}">{{s.title}}</a>
                     </li>
                     {% endfor %}
                 </ul>

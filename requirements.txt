@@ -1,3 +1,4 @@
 flask
-python-dotenv
+flask-login
+flask-socketio
 psycopg2-binary

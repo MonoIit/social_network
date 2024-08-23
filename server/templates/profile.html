@@ -3,4 +3,26 @@
 {% block content %}
 <h1>{{user.username}}</h1>
 <p>{{user.email}}</p>
+{% if user.id != current_user.get_id() %}
+    <form action="{{ url_for('main.profile', user_id=user.id) }}" method="post">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    {% if friendship['status'] == 'received' %}
+    <input type="hidden" name="action" value="confirm">
+    <input type="submit" value="Принять">
+    {% elif friendship['status'] == 'sent' %}
+    <input type="hidden" name="action" value="delete">
+    <input type="submit" value="Отозвать запрос">
+    {% elif friendship['status'] == 'confirm' %}
+    <input type="hidden" name="action" value="delete">
+    <input type="submit" value="Удалить из друзей">
+    {% else %}
+    <input type="hidden" name="action" value="request">
+    <input type="submit" value="Добавить">
+    {% endif %}
+        {% for msg in get_flashed_messages() %}
+        {{msg}}
+        {% endfor %}
+    </form>
+
+{% endif %}
 {% endblock %}
