@@ -19,21 +19,27 @@ side_menu = [
     {'title': 'Друзья', 'url': "friends"}
 ]
 
+
 dbase = PostgresDB(db)
 login_manager.login_view = 'main.login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return UserLogin().fromDB(user_id, dbase)
+    user_data = dbase.get_user_by_id(user_id)
+    if user_data:
+        return UserLogin(user_data)
+    return None
 
 
 @bp.route('/feed')
 @login_required
 def feed():
-    return render_template('index.html', menu=menu, side_menu=side_menu, current_user=current_user)
+    posts = dbase.get_posts()
+    return render_template('index.html', menu=menu, side_menu=side_menu, current_user=current_user, posts=posts)
 
 
 @bp.route('/')
+@login_required
 def index():
     return redirect('feed')
 
@@ -50,7 +56,7 @@ def login():
         if existing_user and check_password_hash(existing_user['password'], password):
             userlogin = UserLogin().create(existing_user)
             login_user(userlogin)
-            session['friends'] = dbase.get_friend_by_id(current_user.get_id())
+            session['friends'] = dbase.get_friend_by_id(current_user.id)
             return redirect('feed')
         else:
             flash('Неверный пользователь или пароль')
@@ -70,7 +76,17 @@ def logout():
 @login_required
 def add_post():
     if request.method == 'POST':
-        flash('Пост опубликован!')
+        author_id = request.form['user_id']
+        message = request.form['news']
+        image = request.files['image']
+        if not message and not image:
+            flash('Напишите хоть что-нибудь или загрузите изображение')
+        else:
+            image = request.files['image']
+            image_id = add_image_and_get_id(image)
+
+            dbase.create_post(author_id, message, image_id)
+            flash('Пост опубликован!')
 
     return render_template('add_post.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
@@ -97,13 +113,17 @@ def registration():
         username = request.form['username']
         password = request.form['password']
         email = request.form['email']
+
         existing_user = dbase.get_user_by_username(username)
         if existing_user:
             flash('Этот пользователь уже существует')
         else:
+            image = request.files['image']
+            image_id = add_image_and_get_id(image)
+
             hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
-            dbase.create_user(username=username, password=hashed_password, email=email)
+            dbase.create_user(username=username, password=hashed_password, email=email, photo_id=image_id)
             return redirect('feed')
 
     return render_template('registration.html', menu=menu, side_menu=side_menu, current_user=current_user)
@@ -150,16 +170,22 @@ def profile(user_id):
         abort(404)
 
     if request.method == 'POST':
-        profile_id = request.form['user_id']
-        if request.form['action'] == "delete":
-            dbase.delete_friendship(user_id=current_user.get_id(), friend_id=profile_id)
-            dbase.delete_friendship(user_id=profile_id, friend_id=current_user.get_id())
-        elif request.form['action'] == "request":
-            dbase.add_friend(from_user_id=current_user.get_id(), to_user_id=profile_id)
-        elif request.form['action'] == "confirm":
-            dbase.confirm_friendship(user_id=current_user.get_id(), friend_id=profile_id)
-            dbase.confirm_friendship(user_id=profile_id, friend_id=current_user.get_id())
-        session['friends'] = dbase.get_friend_by_id(current_user.get_id())
+        if user_id != current_user.get_id():
+
+            if request.form['action'] == "delete":
+                dbase.delete_friendship(user_id=current_user.get_id(), friend_id=user_id)
+                dbase.delete_friendship(user_id=user_id, friend_id=current_user.get_id())
+            elif request.form['action'] == "request":
+                dbase.add_friend(from_user_id=current_user.get_id(), to_user_id=user_id)
+            elif request.form['action'] == "confirm":
+                dbase.confirm_friendship(user_id=current_user.get_id(), friend_id=user_id)
+                dbase.confirm_friendship(user_id=user_id, friend_id=current_user.get_id())
+            session['friends'] = dbase.get_friend_by_id(current_user.get_id())
+        else:
+            profile_id = current_user.get_id()
+            image = request.files['image']
+            image_id = add_image_and_get_id(image)
+            dbase.update_profile_photo(user_id=profile_id, photo_id=image_id)
 
     friendship = dbase.find_friendship(current_user.get_id(), user_id)
     user['id'] = str(user['id'])
@@ -169,4 +195,14 @@ def profile(user_id):
 @socketio.on('message')
 def handle_message(msg):
     send(msg, broadcast=True)
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'png', 'jpg', 'jpeg', 'gif'}
+
+
+def add_image_and_get_id(image):
+    if image and image.filename != '' and allowed_file(image.filename):
+        file_data = image.read()
+        return dbase.add_image_and_get_id(name=image.filename, data=file_data)['id']
 

@@ -2,10 +2,11 @@
 
 {% block content %}
 <h1>Регистрация</h1>
-<form action="/registration" method="post" class="form-contact">
+<form action="/registration" method="post" class="form-contact" enctype="multipart/form-data">
     <p><label>Имя пользователя:</label><input type="text" name="username" value=""></p>
     <p><label>Почта:</label><input type="text" name="email" value=""></p>
     <p><label>Пароль:</label><input type="password" name="password" value=""></p>
+    <p><label>Фото:</label> <input type="file" name="image" value="добавить фото"></p>
     <p><input type="submit" value="Зарегистрироваться">{%for e in get_flashed_messages() %}{{e}}{% endfor %}</p>
 </form>
 {% endblock %}

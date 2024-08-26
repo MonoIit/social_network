@@ -1,8 +1,24 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1>{{user.username}}</h1>
-<p>{{user.email}}</p>
+<h1>{{ user.username }}</h1>
+{% if user.id == current_user.get_id() %}
+    {% if user.photo%}
+    <img src="data:image/jpeg;base64,{{ user.photo | b64encode }}" width="128" height="128">
+    {% else %}
+    <form action="{{ url_for('main.profile', user_id=current_user.get_id()) }}" class="form-contact" method="post">
+        <p><label>Фото:</label> <input type="file" name="image" value="добавить фото"></p>
+        <input type="submit" value="Добавить">
+    </form>
+    {% endif %}
+{% else %}
+    {% if user.photo%}
+    <img src="data:image/jpeg;base64,{{ user.photo | b64encode }}" width="128" height="128">
+    {% else %}
+    <h6>no photo</h6>
+    {% endif %}
+{% endif %}
+<p>{{ user.email }}</p>
 {% if user.id != current_user.get_id() %}
     <form action="{{ url_for('main.profile', user_id=user.id) }}" method="post">
     <input type="hidden" name="user_id" value="{{ user.id }}">
@@ -25,4 +41,5 @@
     </form>
 
 {% endif %}
+
 {% endblock %}

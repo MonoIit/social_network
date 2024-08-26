@@ -1,23 +1,17 @@
-class UserLogin():
-    def fromDB(self, user_id, db):
-        self.__user = db.get_user_by_id(user_id)
-        return self
+from flask_login import UserMixin
 
-    def create(self, user):
-        self.__user = user
-        return self
 
-    def is_active(self):
-        return True
+class UserLogin(UserMixin):
+    def __init__(self, user_data=None):
+        if user_data:
+            self.id = user_data.get('id')
+            self.username = user_data.get('username')
+            self.email = user_data.get('email')
+            self.password = user_data.get('password')
+            self.photo_id = user_data.get('photo_id')
 
-    def is_authenticated(self):
-        return True
-
-    def is_anonymous(self):
-        return False
+    def create(self, user_data):
+        return UserLogin(user_data)
 
     def get_id(self):
-        return str(self.__user['id'])
-
-    def get_username(self):
-        return str(self.__user['username'])
+        return str(self.id)  # Flask-Login требует, чтобы id было строкой

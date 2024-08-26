@@ -3,10 +3,12 @@
 {% block content %}
 {{ super() }}
 <h1>Создать пост</h1>
-<form action="/add_post" method="post" class="form-contact">
-    <p><label>Фото:</label> <input type="image" name="image" value="добавить фото"></p>
+<form action="/add_post" method="post" class="form-contact" enctype="multipart/form-data">
+    <input type="hidden" name="user_id" value="{{ current_user.get_id() }}">
+    <p><label>Фото:</label> <input type="file" name="image" value="добавить фото"></p>
     <p><label>Сообщение:</label></p>
     <p><textarea name="news" rows="7" cols="40"></textarea></p>
-    <p><input type="submit" value="Опубликовать">{% for msg in get_flashed_messages() %}{{msg}}{% endfor %}</p>
+    <p><input type="submit" value="Опубликовать"></p>
+    {% for msg in get_flashed_messages() %}{{msg}}{% endfor %}
 </form>
 {% endblock %}
