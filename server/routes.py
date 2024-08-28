@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, flash, redirect, session, abort
+from flask import Blueprint, render_template, request, flash, redirect, session, abort, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_socketio import send
+from flask_socketio import send, join_room
 from flask_login import login_user, logout_user, login_required, current_user
 from .UserLogin import UserLogin
 from . import db, socketio, login_manager
@@ -91,13 +91,38 @@ def add_post():
     return render_template('add_post.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
 
+@bp.route('/cccc/<user_id>', methods=['GET'])
+@login_required
+def check_friendship(user_id):
+    rez = dbase.find_friendship(current_user.get_id(), user_id)
+    if rez and rez['status'] == 'confirmed':
+        group = dbase.find_group(current_user.get_id(), user_id)
+        if not group:
+            group = dbase.create_personal_group(current_user.get_id(), user_id)
+        return redirect(url_for('main.chat', group_id=group['group_id']))
+    else:
+        return redirect(url_for('main.messanger'))
+
+
+
+@bp.route('/messanger/<int:group_id>', methods=['GET', 'POST'])
+@login_required
+def chat(group_id):
+    if request.method == 'POST':
+        ...
+
+    return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group_id=group_id)
+
+
+
 @bp.route('/messanger', methods=['POST', 'GET'])
 @login_required
 def messanger():
     if request.method == 'POST':
         ...
 
-    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user)
+    chats = dbase.get_user_groups(current_user.get_id())
+    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
 
 
 @bp.errorhandler(404)
@@ -193,8 +218,21 @@ def profile(user_id):
     return render_template('profile.html', menu=menu, side_menu=side_menu, user=user, current_user=current_user, friendship=friendship)
 
 @socketio.on('message')
-def handle_message(msg):
-    send(msg, broadcast=True)
+def handle_message(data):
+    group_id = data['group_id']
+    msg = data['msg']
+    send(msg, to=group_id)
+
+@socketio.on('connect')
+def handle_connect():
+    print("User connected")
+
+@socketio.on('join')
+def on_join(data):
+    username = data['username']
+    group_id = data['group_id']
+    join_room(group_id)
+    send(f"{username} has entered the room {group_id}.", to=group_id)
 
 
 def allowed_file(filename):

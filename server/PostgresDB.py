@@ -16,6 +16,7 @@ class PostgresDB:
             u.id as id,
             username,
             email,
+            photo_id,
             data as photo
         FROM {schema}"Users" u
         LEFT JOIN {schema}"Photos" p 
@@ -259,4 +260,65 @@ class PostgresDB:
         except Exception as e:
             print(f"[!] Error: {e}")
             self.__db.rollback()
+
+    def get_group_by_id(self, group_id):
+        sql = f"""
+        SELECT * FROM {schema}"Groups" WHERE id = %s;
+        """
+        self.__cursor.execute(sql, (group_id,))
+        rez = self.__cursor.fetchone()
+        if not rez:
+            self.__create_group()
+            rez = self.get_group_by_id(group_id)
+        return rez
+
+
+    def create_personal_group(self, user1_id, user2_id):
+        sql = f"""
+        INSERT INTO {schema}"Personal_Groups"
+            (user1_id,
+            user2_id)
+        VALUES (%s, %s)
+        RETURNING group_id;
+        """
+        try:
+            self.__cursor.execute(sql, (user1_id, user2_id))
+            group_id = self.__cursor.fetchone()
+            self.__db.commit()
+            return group_id
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+        return -1
+
+
+    def get_user_groups(self, user_id):
+        sql = f"""
+        SELECT
+            pg.group_id,
+            pg.user1_id,
+            u1.username as name1,
+            u2.username as name2
+        FROM {schema}"Personal_Groups" pg
+        JOIN {schema}"Users" u1
+        ON pg.user1_id = u1.id
+        JOIN {schema}"Users" u2
+        ON pg.user2_id = u2.id
+        WHERE user1_id = %s OR user2_id = %s;
+        """
+        self.__cursor.execute(sql, (user_id, user_id))
+        rez = self.__cursor.fetchall()
+        return rez
+
+    def find_group(self, user_id, friend_id):
+        sql = f"""
+        SELECT
+            group_id
+        FROM {schema}"Personal_Groups"
+            WHERE (user1_id = %s AND user2_id = %s)
+            OR (user1_id = %s AND user2_id = %s);
+        """
+        self.__cursor.execute(sql, (user_id, friend_id, friend_id, user_id))
+        rez = self.__cursor.fetchone()
+        return rez
 
