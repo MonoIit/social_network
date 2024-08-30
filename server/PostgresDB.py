@@ -261,15 +261,18 @@ class PostgresDB:
             print(f"[!] Error: {e}")
             self.__db.rollback()
 
-    def get_group_by_id(self, group_id):
+    def get_private_group_by_id(self, group_id):
         sql = f"""
-        SELECT * FROM {schema}"Groups" WHERE id = %s;
+        SELECT
+            group_id,
+            user1_id,
+            user2_id,
+            created_at,
+            'private' as type 
+        FROM {schema}"Personal_Groups" WHERE group_id = %s;
         """
         self.__cursor.execute(sql, (group_id,))
         rez = self.__cursor.fetchone()
-        if not rez:
-            self.__create_group()
-            rez = self.get_group_by_id(group_id)
         return rez
 
 
@@ -292,13 +295,14 @@ class PostgresDB:
         return -1
 
 
-    def get_user_groups(self, user_id):
+    def get_user_personal_groups(self, user_id):
         sql = f"""
         SELECT
             pg.group_id,
             pg.user1_id,
             u1.username as name1,
-            u2.username as name2
+            u2.username as name2,
+            'private' as type
         FROM {schema}"Personal_Groups" pg
         JOIN {schema}"Users" u1
         ON pg.user1_id = u1.id
@@ -307,6 +311,22 @@ class PostgresDB:
         WHERE user1_id = %s OR user2_id = %s;
         """
         self.__cursor.execute(sql, (user_id, user_id))
+        rez = self.__cursor.fetchall()
+        return rez
+
+    def get_user_public_groups(self, user_id):
+        sql = f"""
+        SELECT
+            group_id,
+            user_id,
+            role,
+            pg.name as name1,
+            'public' as type
+        FROM {schema}"Public_Participants" pp
+        JOIN {schema}"Public_Groups" pg
+        ON pg.id = pp.group_id AND pp.user_id = %s
+        """
+        self.__cursor.execute(sql, (user_id,))
         rez = self.__cursor.fetchall()
         return rez
 
@@ -322,3 +342,78 @@ class PostgresDB:
         rez = self.__cursor.fetchone()
         return rez
 
+    def create_public_group(self, name, image_id):
+        sql = f"""
+        INSERT INTO {schema}"Public_Groups"
+            (name,
+            photo_id)
+        VALUES (%s, %s)
+        RETURNING id;    
+        """
+        try:
+            self.__cursor.execute(sql, (name, image_id))
+            group_id = self.__cursor.fetchone()
+            return group_id
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+
+    def add_user_to_group(self, user_id, group_id, role):
+        sql = f"""
+        INSERT INTO {schema}"Public_Participants"
+            (user_id,
+            group_id,
+            role)
+        VALUES (%s, %s, %s);
+        """
+        try:
+            self.__cursor.execute(sql, (user_id, group_id, role))
+            self.__db.commit()
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+
+    def get_public_group_info_by_user(self, user_id, group_id):
+        sql = f"""
+        SELECT
+            user_id,
+            group_id,
+            role,
+            created_at,
+            'public' as type 
+        FROM {schema}"Public_Participants" WHERE user_id = %s AND group_id = %s;
+        """
+        self.__cursor.execute(sql, (user_id, group_id))
+        rez = self.__cursor.fetchone()
+        return rez
+
+    def add_message(self, group_id, user_id, content):
+        sql = f"""
+        INSERT INTO {schema}"Messages"
+            (user_id,
+            group_id,
+            content)
+        VALUES (%s, %s, %s)
+        """
+        try:
+            self.__cursor.execute(sql, (user_id, group_id, content))
+            self.__db.commit()
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+
+    def get_ten_last_messages(self, group_id):
+        sql = f"""
+        SELECT 
+            u.username,
+            m.content 
+        FROM {schema}"Messages" m
+        JOIN {schema}"Users" u
+        ON m.user_id = u.id AND m.group_id = %s
+        ORDER BY 
+            created_at DESC
+        LIMIT 10;
+        """
+        self.__cursor.execute(sql, (group_id,))
+        rez = self.__cursor.fetchall()[::-1]
+        return rez

@@ -2,29 +2,58 @@
 
 {% block content %}
 
-    <div id="chat{{ group_id }}"></div>
-    <input id="message" type="text" placeholder="Enter message...">
-    <button id="send">Send</button>
+    <div id="chat{{ group.group_id }}">
+    {% for message in messages %}
+        <p>{{message.username}}: {{message.content}}</p>
+    {% endfor %}
+    </div>
+    <p>
+        <form id="messageForm" method="post">
+            <input type="hidden" id="user" name="user" value="{{ current_user.get_username() }}">
+            <input type="hidden" id="group_id" name="group_id" value="{{ group.group_id }}">
+            <input id="message" name="message" type="text" placeholder="Enter message...">
+            <button id="send" type="submit">Send</button>
+        </form>
+    </p>
+    <p>
+    {% if group.type == 'public' %}
+        {% if group.role == 'admin' %}
+        <a href="#">редактировать группу</a>
+        {% endif %}
+    {% endif %}
+    </p>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <script>
     var socket = io();
 
+    // Присоединение к комнате при подключении
     socket.on('connect', function() {
-        socket.emit('join', { 'username': '{{ current_user.get_username() }}', 'group_id': '{{ group_id }}' });
+        socket.emit('join', { 'username': '{{ current_user.get_username() }}', 'group_id': '{{ group.group_id }}' });
     });
 
+    // Обработка получения сообщения
     socket.on('message', function(msg) {
-        var chat = document.getElementById('chat{{ group_id }}');
+        var chat = document.getElementById('chat{{ group.group_id }}');
         var p = document.createElement('p');
         p.innerHTML = msg;
         chat.appendChild(p);
     });
 
-    document.getElementById('send').onclick = function() {
-        var msg = document.getElementById('message').value;
-        socket.emit('message', { 'msg': msg, 'group_id': '{{ group_id }}' });
-        document.getElementById('message').value = '';
-    };
+    // Отправка сообщения через Socket.IO при отправке формы
+    $(document).ready(function() {
+        $('#messageForm').on('submit', function(event) {
+            event.preventDefault(); // Предотвращаем стандартное поведение формы
+
+            var user = $('#user').val();
+            var msg = $('#message').val(); // Получаем текст сообщения
+            var group_id = $('#group_id').val(); // ID группы из шаблона
+
+            // Отправляем сообщение через Socket.IO
+            socket.emit('message', { 'user': user, 'msg': msg, 'group_id': group_id });
+            $('#message').val(''); // Очищаем поле ввода
+        });
+    });
     </script>
 {% endblock %}

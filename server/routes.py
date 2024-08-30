@@ -23,6 +23,7 @@ side_menu = [
 dbase = PostgresDB(db)
 login_manager.login_view = 'main.login'
 
+
 @login_manager.user_loader
 def load_user(user_id):
     user_data = dbase.get_user_by_id(user_id)
@@ -57,6 +58,7 @@ def login():
             userlogin = UserLogin().create(existing_user)
             login_user(userlogin)
             session['friends'] = dbase.get_friend_by_id(current_user.id)
+            session['groups'] = dbase.get_user_personal_groups(current_user.get_id()) + dbase.get_user_public_groups(current_user.get_id())
             return redirect('feed')
         else:
             flash('Неверный пользователь или пароль')
@@ -99,20 +101,30 @@ def check_friendship(user_id):
         group = dbase.find_group(current_user.get_id(), user_id)
         if not group:
             group = dbase.create_personal_group(current_user.get_id(), user_id)
-        return redirect(url_for('main.chat', group_id=group['group_id']))
+        return redirect(url_for('main.chat', group=group))
     else:
         return redirect(url_for('main.messanger'))
 
 
-
-@bp.route('/messanger/<int:group_id>', methods=['GET', 'POST'])
+@bp.route('/messanger/chat', methods=['GET', 'POST'])
 @login_required
-def chat(group_id):
-    if request.method == 'POST':
-        ...
-
-    return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group_id=group_id)
-
+def chat():
+    id = request.args.get('group_id')
+    type = request.args.get('type')
+    if type == 'public':
+        group = dbase.get_public_group_info_by_user(current_user.get_id(), id)
+        if not group:
+            return redirect(url_for('main.messanger'))
+        messages = dbase.get_ten_last_messages(id)
+    elif type == 'private':
+        group = dbase.get_private_group_by_id(id)
+        if not group or not current_user.get_int_id() in (group['user1_id'], group['user2_id']):
+            return redirect(url_for('main.messanger'))
+        messages = dbase.get_ten_last_messages(id)
+    else:
+        return redirect(url_for('main.messanger'))
+    return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group,
+                           messages=messages)
 
 
 @bp.route('/messanger', methods=['POST', 'GET'])
@@ -121,8 +133,7 @@ def messanger():
     if request.method == 'POST':
         ...
 
-    chats = dbase.get_user_groups(current_user.get_id())
-    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
+    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=session['groups'])
 
 
 @bp.errorhandler(404)
@@ -162,13 +173,13 @@ def friends():
         if request.form['action'] == "Отклонить":
             dbase.delete_friendship(user_id=current_user.get_id(), friend_id=profile_id)
             dbase.delete_friendship(user_id=profile_id, friend_id=current_user.get_id())
+            session['friends'] = dbase.get_friend_by_id(current_user.get_id())
         elif request.form['action'] == "Принять":
             dbase.confirm_friendship(user_id=current_user.get_id(), friend_id=profile_id)
             dbase.confirm_friendship(user_id=profile_id, friend_id=current_user.get_id())
+            session['friends'] = dbase.get_friend_by_id(current_user.get_id())
 
-    session['friends'] = dbase.get_friend_by_id(current_user.get_id())
     friends = session.get('friends', [])
-
     return render_template('friends.html', menu=menu, side_menu=side_menu, friends=friends, current_user=current_user)
 
 
@@ -213,26 +224,58 @@ def profile(user_id):
             dbase.update_profile_photo(user_id=profile_id, photo_id=image_id)
 
     friendship = dbase.find_friendship(current_user.get_id(), user_id)
-    user['id'] = str(user['id'])
 
     return render_template('profile.html', menu=menu, side_menu=side_menu, user=user, current_user=current_user, friendship=friendship)
 
-@socketio.on('message')
-def handle_message(data):
-    group_id = data['group_id']
-    msg = data['msg']
-    send(msg, to=group_id)
+
+@bp.route('/group/construct', methods=['GET', 'POST'])
+@login_required
+def create_group():
+    if request.method == 'POST':
+        name = request.form['name']
+        image = request.files['image']
+        try:
+            image_id = add_image_and_get_id(image)
+            group = dbase.create_public_group(name, image_id)
+            dbase.add_user_to_group(current_user.get_id(), group['id'], 'admin')
+            return redirect(url_for('main.chat', group_id=group['id']))
+        except Exception as e:
+            flash('Возникла ошибка при создании группы')
+            print(f"[!] Error: {e}")
+            return redirect(url_for('main.create_group'))
+
+    return render_template('create_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user)
+
+
+@bp.route('/group/edit/<int:group_id>', methods=['GET', 'POST'])
+@login_required
+def edit_group(group_id):
+    group = dbase.get_private_group_by_id(group_id)
+
+
 
 @socketio.on('connect')
 def handle_connect():
     print("User connected")
+
 
 @socketio.on('join')
 def on_join(data):
     username = data['username']
     group_id = data['group_id']
     join_room(group_id)
-    send(f"{username} has entered the room {group_id}.", to=group_id)
+
+
+
+@socketio.on('message')
+def handle_message(data):
+    user = data['user']
+    group_id = data['group_id']
+    msg = data['msg']
+
+    dbase.add_message(group_id, current_user.get_id(), msg)
+    # Отправляем сообщение обратно в комнату
+    send(f"{user}: {msg}", to=group_id)
 
 
 def allowed_file(filename):

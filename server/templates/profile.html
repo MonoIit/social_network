@@ -2,7 +2,7 @@
 
 {% block content %}
 <h1>{{ user.username }}</h1>
-{% if user.id == current_user.get_id() %}
+{% if user.id == current_user.get_int_id() %}
     {% if user.photo%}
     <img src="data:image/jpeg;base64,{{ user.photo | b64encode }}" width="128" height="128">
     {% else %}
@@ -19,7 +19,7 @@
     {% endif %}
 {% endif %}
 <p>{{ user.email }}</p>
-{% if user.id != current_user.get_id() %}
+{% if user.id != current_user.get_int_id() %}
     <form action="{{ url_for('main.profile', user_id=user.id) }}" method="post">
     <input type="hidden" name="user_id" value="{{ user.id }}">
     {% if friendship['status'] == 'received' %}

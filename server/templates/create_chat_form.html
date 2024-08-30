@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form action="{{ url_for('main.create_group') }}" method="post" class="form-contact" enctype="multipart/form-data">
+    <input type="hidden" name="user_id" value="{{ current_user.get_id() }}">
+    <p><label>Фото:</label> <input type="file" name="image" value="добавить фото"></p>
+    <p><label>Название группы:</label> <input type="text" name="name" value=""></p>
+    <p><input type="submit" value="Создать"></p>
+    {% for msg in get_flashed_messages() %}{{msg}}{% endfor %}
+</form>
+{% endblock %}
