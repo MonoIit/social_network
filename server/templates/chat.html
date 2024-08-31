@@ -18,7 +18,7 @@
     <p>
     {% if group.type == 'public' %}
         {% if group.role == 'admin' %}
-        <a href="#">редактировать группу</a>
+        <a href="{{ url_for('main.edit_group', group_id=group.group_id) }}">редактировать группу</a>
         {% endif %}
     {% endif %}
     </p>

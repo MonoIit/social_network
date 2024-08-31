@@ -3,7 +3,7 @@
 {% block content %}
 <h1>{{ user.username }}</h1>
 {% if user.id == current_user.get_int_id() %}
-    {% if user.photo%}
+    {% if user.photo %}
     <img src="data:image/jpeg;base64,{{ user.photo | b64encode }}" width="128" height="128">
     {% else %}
     <form action="{{ url_for('main.profile', user_id=current_user.get_id()) }}" class="form-contact" method="post">
@@ -28,7 +28,7 @@
     {% elif friendship['status'] == 'sent' %}
     <input type="hidden" name="action" value="delete">
     <input type="submit" value="Отозвать запрос">
-    {% elif friendship['status'] == 'confirm' %}
+    {% elif friendship['status'] == 'confirmed' %}
     <input type="hidden" name="action" value="delete">
     <input type="submit" value="Удалить из друзей">
     {% else %}

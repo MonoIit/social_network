@@ -58,7 +58,6 @@ def login():
             userlogin = UserLogin().create(existing_user)
             login_user(userlogin)
             session['friends'] = dbase.get_friend_by_id(current_user.id)
-            session['groups'] = dbase.get_user_personal_groups(current_user.get_id()) + dbase.get_user_public_groups(current_user.get_id())
             return redirect('feed')
         else:
             flash('Неверный пользователь или пароль')
@@ -98,10 +97,10 @@ def add_post():
 def check_friendship(user_id):
     rez = dbase.find_friendship(current_user.get_id(), user_id)
     if rez and rez['status'] == 'confirmed':
-        group = dbase.find_group(current_user.get_id(), user_id)
+        group = dbase.find_private_group(current_user.get_id(), user_id)
         if not group:
             group = dbase.create_personal_group(current_user.get_id(), user_id)
-        return redirect(url_for('main.chat', group=group))
+        return redirect(url_for('main.chat', group_id=group['group_id'], type='private'))
     else:
         return redirect(url_for('main.messanger'))
 
@@ -133,7 +132,8 @@ def messanger():
     if request.method == 'POST':
         ...
 
-    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=session['groups'])
+    chats = dbase.get_user_personal_groups(current_user.get_id()) + dbase.get_user_public_groups(current_user.get_id())
+    return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
 
 
 @bp.errorhandler(404)
@@ -250,7 +250,24 @@ def create_group():
 @bp.route('/group/edit/<int:group_id>', methods=['GET', 'POST'])
 @login_required
 def edit_group(group_id):
-    group = dbase.get_private_group_by_id(group_id)
+    group = dbase.get_public_group(group_id)
+
+    if request.method == 'POST':
+        name = request.form.get('name')
+        if not name:
+            flash('Введите название группы')
+        else:
+            image = request.files['image']
+            image_id = add_image_and_get_id(image) if image else group['photo_id']
+
+            try:
+                dbase.update_public_group(group_id, name, image_id)
+                return redirect(url_for('main.messanger'))
+            except Exception as e:
+                flash("Произошла ошибка")
+                print(f"[!] Error: {e}")
+
+    return render_template('edit_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group)
 
 
 

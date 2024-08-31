@@ -294,7 +294,6 @@ class PostgresDB:
             self.__db.rollback()
         return -1
 
-
     def get_user_personal_groups(self, user_id):
         sql = f"""
         SELECT
@@ -330,7 +329,7 @@ class PostgresDB:
         rez = self.__cursor.fetchall()
         return rez
 
-    def find_group(self, user_id, friend_id):
+    def find_private_group(self, user_id, friend_id):
         sql = f"""
         SELECT
             group_id
@@ -341,6 +340,21 @@ class PostgresDB:
         self.__cursor.execute(sql, (user_id, friend_id, friend_id, user_id))
         rez = self.__cursor.fetchone()
         return rez
+
+    def delete_private_group(self, user_id, friend_id):
+        sql = f"""
+        DELETE FROM
+            {schema}
+        WHERE
+            (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s);
+        """
+        try:
+            self.__cursor.execute(sql, (user_id, friend_id, friend_id, user_id))
+            self.__db.commit()
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+
 
     def create_public_group(self, name, image_id):
         sql = f"""
@@ -354,6 +368,22 @@ class PostgresDB:
             self.__cursor.execute(sql, (name, image_id))
             group_id = self.__cursor.fetchone()
             return group_id
+        except Exception as e:
+            print(f"[!] Error: {e}")
+            self.__db.rollback()
+
+    def update_public_group(self, group_id, name, photo_id):
+        sql = f"""
+        UPDATE 
+            {schema}"Public_Groups"
+        SET 
+            name = %s, photo_id = %s
+        WHERE
+            id = %s  
+        """
+        try:
+            self.__cursor.execute(sql, (name, photo_id, group_id))
+            self.__db.commit()
         except Exception as e:
             print(f"[!] Error: {e}")
             self.__db.rollback()
@@ -384,6 +414,26 @@ class PostgresDB:
         FROM {schema}"Public_Participants" WHERE user_id = %s AND group_id = %s;
         """
         self.__cursor.execute(sql, (user_id, group_id))
+        rez = self.__cursor.fetchone()
+        return rez
+
+    def get_public_group(self, group_id):
+        sql = f"""
+        SELECT
+            pg.id,
+            pg.name,
+            pg.photo_id,
+            p.data as photo
+        FROM
+            {schema}"Public_Groups" pg
+        LEFT JOIN
+            {schema}"Photos" p
+        ON
+            pg.photo_id = p.id
+        WHERE
+            pg.id = %s; 
+        """
+        self.__cursor.execute(sql, (group_id,))
         rez = self.__cursor.fetchone()
         return rez
 

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<form action="{{ url_for('main.edit_group', group_id=group.id) }}" method="post" class="form-contact" enctype="multipart/form-data">
+    <input type="hidden" name="user_id" value="{{ current_user.get_id() }}">
+    <p><label>Фото:</label></p>
+        <p>
+        {% if group.photo %}
+        <img id="previewImg" src="data:image/jpeg;base64,{{ group.photo | b64encode }}" width="64" height="64">
+        {% else %}
+        <img id="previewImg" src="" width="64" height="64">
+        {% endif %}
+        </p>
+        <p><input id="imageInput" accept="image/*" type="file" name="image" value="добавить фото"></p>
+    <p><label>Название группы:</label> <input type="text" name="name" value="{{ group.name }}"></p>
+    <p><input type="submit" value="Обновить"></p>
+    {% for msg in get_flashed_messages() %}{{msg}}{% endfor %}
+</form>
+
+<script>
+document.getElementById('imageInput').addEventListener('change', function(event) {
+    var file = event.target.files[0];  // Получаем выбранный файл
+
+    if (file) {
+        var reader = new FileReader();  // Создаем FileReader
+
+        reader.onload = function(e) {
+            // Устанавливаем атрибут src изображения на данные, прочитанные FileReader
+            var previewImg = document.getElementById('previewImg');
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';  // Отображаем изображение
+        };
+
+        reader.readAsDataURL(file);  // Читаем файл как URL данных
+    }
+});
+</script>
+
+{% endblock %}
