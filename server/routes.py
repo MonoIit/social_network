@@ -92,36 +92,17 @@ def add_post():
     return render_template('add_post.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
 
-@bp.route('/cccc/<user_id>', methods=['GET'])
+@bp.route('/messanger/chat/<int:group_id>', methods=['GET', 'POST'])
 @login_required
-def check_friendship(user_id):
-    rez = dbase.find_friendship(current_user.get_id(), user_id)
-    if rez and rez['status'] == 'confirmed':
-        group = dbase.find_private_group(current_user.get_id(), user_id)
-        if not group:
-            group = dbase.create_personal_group(current_user.get_id(), user_id)
-        return redirect(url_for('main.chat', group_id=group['group_id'], type='private'))
-    else:
+def chat(group_id):
+    group = dbase.get_group_info(group_id)
+    if not group:
         return redirect(url_for('main.messanger'))
-
-
-@bp.route('/messanger/chat', methods=['GET', 'POST'])
-@login_required
-def chat():
-    id = request.args.get('group_id')
-    type = request.args.get('type')
-    if type == 'public':
-        group = dbase.get_public_group_info_by_user(current_user.get_id(), id)
-        if not group:
-            return redirect(url_for('main.messanger'))
-        messages = dbase.get_ten_last_messages(id)
-    elif type == 'private':
-        group = dbase.get_private_group_by_id(id)
-        if not group or not current_user.get_int_id() in (group['user1_id'], group['user2_id']):
-            return redirect(url_for('main.messanger'))
-        messages = dbase.get_ten_last_messages(id)
-    else:
-        return redirect(url_for('main.messanger'))
+    if group['type'] == 'private':
+        user1, user2 = dbase.get_group_participants(group_id)
+        if not check_friendship(user1['user_id'], user2['user_id']):
+            return redirect(url_for('messanger'))
+    messages = dbase.get_ten_last_messages(group_id)
     return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group,
                            messages=messages)
 
@@ -132,7 +113,7 @@ def messanger():
     if request.method == 'POST':
         ...
 
-    chats = dbase.get_user_personal_groups(current_user.get_id()) + dbase.get_user_public_groups(current_user.get_id())
+    chats = dbase.get_user_groups(current_user.get_id())
     return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
 
 
@@ -177,6 +158,11 @@ def friends():
         elif request.form['action'] == "Принять":
             dbase.confirm_friendship(user_id=current_user.get_id(), friend_id=profile_id)
             dbase.confirm_friendship(user_id=profile_id, friend_id=current_user.get_id())
+            group = dbase.find_private_group(current_user.get_id(), profile_id)
+            if not group:
+                group = dbase.create_group(name="0", photo_id=None, type="private")
+                dbase.add_user_to_group(current_user.get_id(), group['id'], 'paricipant')
+                dbase.add_user_to_group(profile_id, group['id'], 'participant')
             session['friends'] = dbase.get_friend_by_id(current_user.get_id())
 
     friends = session.get('friends', [])
@@ -216,6 +202,12 @@ def profile(user_id):
             elif request.form['action'] == "confirm":
                 dbase.confirm_friendship(user_id=current_user.get_id(), friend_id=user_id)
                 dbase.confirm_friendship(user_id=user_id, friend_id=current_user.get_id())
+                group = dbase.find_private_group(current_user.get_id(), user_id)
+                if not group:
+                    id = dbase.create_group(name="0", photo_id=None, type="private")
+                    dbase.add_user_to_group(current_user.get_id(), id, 'paricipant')
+                    dbase.add_user_to_group(user_id, id, 'participant')
+
             session['friends'] = dbase.get_friend_by_id(current_user.get_id())
         else:
             profile_id = current_user.get_id()
@@ -236,7 +228,7 @@ def create_group():
         image = request.files['image']
         try:
             image_id = add_image_and_get_id(image)
-            group = dbase.create_public_group(name, image_id)
+            group = dbase.create_group(name, image_id, 'public')
             dbase.add_user_to_group(current_user.get_id(), group['id'], 'admin')
             return redirect(url_for('main.chat', group_id=group['id']))
         except Exception as e:
@@ -250,7 +242,7 @@ def create_group():
 @bp.route('/group/edit/<int:group_id>', methods=['GET', 'POST'])
 @login_required
 def edit_group(group_id):
-    group = dbase.get_public_group(group_id)
+    group = dbase.get_group_info(group_id)
 
     if request.method == 'POST':
         name = request.form.get('name')
@@ -261,7 +253,7 @@ def edit_group(group_id):
             image_id = add_image_and_get_id(image) if image else group['photo_id']
 
             try:
-                dbase.update_public_group(group_id, name, image_id)
+                dbase.update_group(group_id, name, image_id)
                 return redirect(url_for('main.messanger'))
             except Exception as e:
                 flash("Произошла ошибка")
@@ -303,4 +295,12 @@ def add_image_and_get_id(image):
     if image and image.filename != '' and allowed_file(image.filename):
         file_data = image.read()
         return dbase.add_image_and_get_id(name=image.filename, data=file_data)['id']
+
+
+def check_friendship(user1_id, user2_id):
+    rez = dbase.find_friendship(user1_id, user2_id)
+    if rez and rez['status'] == 'confirmed':
+        return True
+    else:
+        return False
 

@@ -6,9 +6,9 @@
     {% for chat in chats %}
     <li>
         <div>
-            {% if chat.photo %}<img src="data:image/jpeg;base64,{{ chat.photo | b64encode }}" width="32" height="32">{%
+            {% if False %}<img src="data:image/jpeg;base64,{{ chat.photo | b64encode }}" width="32" height="32">{%
             endif %}<a href="{{
-url_for('main.chat', group_id=chat.group_id, type=chat.type ) }}">{% if chat.user1_id == current_user.get_int_id() %}{{chat.name2}}{% else %}{{chat.name1}}{% endif %}</a>
+url_for('main.chat', group_id=chat.id) }}">{{chat.name}}</a>
         </div>
     </li>
     {% endfor %}

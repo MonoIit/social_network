@@ -87,18 +87,40 @@ class PostgresDB:
 
     def get_friend_by_id(self, from_user_id):
         sql = f"""
+        WITH UserFriends AS (
+            -- Находим всех друзей пользователя
+            SELECT 
+                f.friend_id,
+                f.status,
+                u.username,
+                p.data as photo
+            FROM sn."Friends" f
+            JOIN sn."Users" u ON f.friend_id = u.id
+            LEFT JOIN sn."Photos" p ON u.photo_id = p.id
+            WHERE (f.user_id = %s)
+        ),
+        PrivateGroups AS (
+            -- Находим группы типа 'private', в которых участвуют друзья пользователя
+            SELECT 
+                p1.user_id,
+                g.id AS group_id
+            FROM sn."Groups" g
+            JOIN sn."Participants" p1 ON g.id = p1.group_id  -- Проверяем участие друга
+            JOIN sn."Participants" p2 ON g.id = p2.group_id  -- Проверяем участие пользователя
+            WHERE g.type = 'private' 
+              AND p1.user_id IN (SELECT friend_id FROM UserFriends)  -- Друг в группе
+              AND p2.user_id = %s  -- Пользователь в группе
+        )
         SELECT 
-            u.id,
-            u.username,
-            f.status
-        FROM 
-            {schema}"Friends" f
-        JOIN 
-            {schema}"Users" u 
-            ON (f.user_id = %s and f.friend_id = u.id);
+            uf.friend_id as id,
+            uf.username,
+            uf.status,
+            pg.group_id
+        FROM UserFriends uf
+        LEFT JOIN PrivateGroups pg ON pg.user_id = uf.friend_id;
         """
         try:
-            self.__cursor.execute(sql, (from_user_id,))
+            self.__cursor.execute(sql, (from_user_id, from_user_id))
             res = self.__cursor.fetchall()
             if res:
                 return res
@@ -142,7 +164,6 @@ class PostgresDB:
         """
         try:
             self.__cursor.execute(sql, (user_id, friend_id))
-            self.__db.commit()
         except Exception as e:
             print(f"[!] Error: {e}")
             self.__db.rollback()
@@ -265,117 +286,92 @@ class PostgresDB:
         sql = f"""
         SELECT
             group_id,
-            user1_id,
-            user2_id,
+            user_id,
             created_at,
-            'private' as type 
-        FROM {schema}"Personal_Groups" WHERE group_id = %s;
+            type 
+        FROM {schema}"Groups" WHERE group_id = %s;
         """
         self.__cursor.execute(sql, (group_id,))
         rez = self.__cursor.fetchone()
         return rez
 
 
-    def create_personal_group(self, user1_id, user2_id):
+    def create_group(self, name, photo_id, type):
         sql = f"""
-        INSERT INTO {schema}"Personal_Groups"
-            (user1_id,
-            user2_id)
-        VALUES (%s, %s)
-        RETURNING group_id;
+        INSERT INTO {schema}"Groups"
+            (name,
+            photo_id,
+            type)
+        VALUES (%s, %s, %s)
+        RETURNING id;
         """
         try:
-            self.__cursor.execute(sql, (user1_id, user2_id))
+            self.__cursor.execute(sql, (name, photo_id, type))
             group_id = self.__cursor.fetchone()
-            self.__db.commit()
             return group_id
         except Exception as e:
             print(f"[!] Error: {e}")
             self.__db.rollback()
         return -1
 
-    def get_user_personal_groups(self, user_id):
+    def get_user_groups(self, user_id):
         sql = f"""
-        SELECT
-            pg.group_id,
-            pg.user1_id,
-            u1.username as name1,
-            u2.username as name2,
-            'private' as type
-        FROM {schema}"Personal_Groups" pg
-        JOIN {schema}"Users" u1
-        ON pg.user1_id = u1.id
-        JOIN {schema}"Users" u2
-        ON pg.user2_id = u2.id
-        WHERE user1_id = %s OR user2_id = %s;
+        WITH PublicGroups AS (
+            -- Находим все публичные группы, в которых участвует заданный пользователь
+            SELECT 
+                g.id AS id,
+                g.name AS name,
+                g.type AS type,
+                ph.data AS photo,
+                p.user_id AS user_id  -- Пользователь, участвующий в группе
+            FROM sn."Groups" g
+            JOIN sn."Participants" p ON g.id = p.group_id AND g.type = 'public'
+            LEFT JOIN sn."Photos" ph ON g.photo_id = ph.id
+            WHERE p.user_id = %s
+        ),
+        PrivateGroups AS (
+            -- Находим все приватные группы, в которых участвует заданный пользователь
+            SELECT
+                p1.group_id as id,
+                u.username as name,
+                g.type as type,
+                ph.data as photo,
+                p1.user_id as user_id
+            FROM sn."Participants" p1
+            JOIN sn."Participants" p2 ON p1.group_id = p2.group_id AND p1.user_id = %s AND p2.user_id <> %s
+            JOIN sn."Groups" g ON p1.group_id = g.id AND g.type = 'private'
+            JOIN sn."Users" u ON p2.user_id = u.id
+            LEFT JOIN sn."Photos" ph ON u.photo_id = ph.id
+        )
+        SELECT * FROM PrivateGroups
+        UNION ALL
+        SELECT * FROM PublicGroups;
         """
-        self.__cursor.execute(sql, (user_id, user_id))
+        self.__cursor.execute(sql, (user_id, user_id, user_id))
         rez = self.__cursor.fetchall()
         return rez
 
-    def get_user_public_groups(self, user_id):
+    def find_private_group(self, user1_id, user2_id):
         sql = f"""
         SELECT
-            group_id,
-            user_id,
-            role,
-            pg.name as name1,
-            'public' as type
-        FROM {schema}"Public_Participants" pp
-        JOIN {schema}"Public_Groups" pg
-        ON pg.id = pp.group_id AND pp.user_id = %s
+            p1.group_id as id,
+            g.type
+        FROM {schema}"Participants" p1
+        JOIN {schema}"Participants" p2
+        ON
+            (p1.user_id = %s AND p2.user_id = %s)
+        JOIN {schema}"Groups" g
+        ON
+            p1.group_id = g.id;
         """
-        self.__cursor.execute(sql, (user_id,))
-        rez = self.__cursor.fetchall()
-        return rez
-
-    def find_private_group(self, user_id, friend_id):
-        sql = f"""
-        SELECT
-            group_id
-        FROM {schema}"Personal_Groups"
-            WHERE (user1_id = %s AND user2_id = %s)
-            OR (user1_id = %s AND user2_id = %s);
-        """
-        self.__cursor.execute(sql, (user_id, friend_id, friend_id, user_id))
+        self.__cursor.execute(sql, (user1_id, user2_id))
         rez = self.__cursor.fetchone()
         return rez
 
-    def delete_private_group(self, user_id, friend_id):
-        sql = f"""
-        DELETE FROM
-            {schema}
-        WHERE
-            (user1_id = %s AND user2_id = %s) OR (user1_id = %s AND user2_id = %s);
-        """
-        try:
-            self.__cursor.execute(sql, (user_id, friend_id, friend_id, user_id))
-            self.__db.commit()
-        except Exception as e:
-            print(f"[!] Error: {e}")
-            self.__db.rollback()
-
-
-    def create_public_group(self, name, image_id):
-        sql = f"""
-        INSERT INTO {schema}"Public_Groups"
-            (name,
-            photo_id)
-        VALUES (%s, %s)
-        RETURNING id;    
-        """
-        try:
-            self.__cursor.execute(sql, (name, image_id))
-            group_id = self.__cursor.fetchone()
-            return group_id
-        except Exception as e:
-            print(f"[!] Error: {e}")
-            self.__db.rollback()
-
-    def update_public_group(self, group_id, name, photo_id):
+    def update_group(self, group_id, name, photo_id):
         sql = f"""
         UPDATE 
-            {schema}"Public_Groups"
+            {schema}"Groups"
         SET 
             name = %s, photo_id = %s
         WHERE
@@ -390,7 +386,7 @@ class PostgresDB:
 
     def add_user_to_group(self, user_id, group_id, role):
         sql = f"""
-        INSERT INTO {schema}"Public_Participants"
+        INSERT INTO {schema}"Participants"
             (user_id,
             group_id,
             role)
@@ -403,29 +399,16 @@ class PostgresDB:
             print(f"[!] Error: {e}")
             self.__db.rollback()
 
-    def get_public_group_info_by_user(self, user_id, group_id):
+    def get_group_info(self, group_id):
         sql = f"""
         SELECT
-            user_id,
-            group_id,
-            role,
-            created_at,
-            'public' as type 
-        FROM {schema}"Public_Participants" WHERE user_id = %s AND group_id = %s;
-        """
-        self.__cursor.execute(sql, (user_id, group_id))
-        rez = self.__cursor.fetchone()
-        return rez
-
-    def get_public_group(self, group_id):
-        sql = f"""
-        SELECT
-            pg.id,
+            pg.id as group_id,
             pg.name,
+            pg.type,
             pg.photo_id,
             p.data as photo
         FROM
-            {schema}"Public_Groups" pg
+            {schema}"Groups" pg
         LEFT JOIN
             {schema}"Photos" p
         ON
@@ -466,4 +449,16 @@ class PostgresDB:
         """
         self.__cursor.execute(sql, (group_id,))
         rez = self.__cursor.fetchall()[::-1]
+        return rez
+
+    def get_group_participants(self, group_id):
+        sql = f"""
+        SELECT
+            user_id
+        FROM {schema}"Participants"
+        WHERE
+            group_id = %s;
+        """
+        self.__cursor.execute(sql, (group_id,))
+        rez = self.__cursor.fetchall()
         return rez

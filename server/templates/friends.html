@@ -20,7 +20,7 @@
         {% elif friend['status'] == 'sent' %}
         Ожидает поддверждения
         {% elif friend['status'] == 'confirmed' %}
-        <a href="{{ url_for('main.check_friendship', user_id=friend.id) }}">Сообщение</a>
+        <a href="{{ url_for('main.chat', group_id=friend.group_id) }}">Сообщение</a>
         {% endif %}
         </form>
     </li>
