@@ -210,18 +210,18 @@ class PostgresDB:
             u.id AS author_id,
             u.username AS author_username,
             p.message AS message,
-            p1.data AS author_photo,
-            p2.data AS post_photos
+            p1.data AS post_photo,
+            p2.data AS user_photo
         FROM 
-            {schema}"Photos_Posts" pp
+            {schema}"Posts" p 
         LEFT JOIN 
-            {schema}"Posts" p ON pp."Posts_id"= p.id
-        LEFT JOIN 
+            {schema}"Photos_Posts" pp ON pp."Posts_id"= p.id
+        JOIN 
             {schema}"Users" u ON p.author_id = u.id
-        LEFT JOIN 
-            {schema}"Photos" p1 ON u.id = u.photo_id
-        LEFT JOIN 
-            {schema}"Photos" p2 ON pp."Photos_id" = p2.id
+        LEFT JOIN
+            {schema}"Photos" p1 ON pp."Photos_id" = p1.id
+        LEFT JOIN
+            {schema}"Photos" p2 ON u.photo_id = p2.id
         ORDER BY 
             p.id
         LIMIT 10;
@@ -248,11 +248,12 @@ class PostgresDB:
         try:
             self.__cursor.execute(sql, (name, psycopg2.Binary(data)))
             image_id = self.__cursor.fetchone()
-            return image_id
+            self.__db.commit()
+            return image_id['id']
         except Exception as e:
             print(f"[!] Error: {e}")
             self.__db.rollback()
-            return 0
+
 
     def update_profile_photo(self, user_id, photo_id):
         sql = f"""
@@ -402,7 +403,7 @@ class PostgresDB:
     def get_group_info(self, group_id):
         sql = f"""
         SELECT
-            pg.id as group_id,
+            pg.id as id,
             pg.name,
             pg.type,
             pg.photo_id,
@@ -462,3 +463,24 @@ class PostgresDB:
         self.__cursor.execute(sql, (group_id,))
         rez = self.__cursor.fetchall()
         return rez
+
+    def find_user_in_group(self, group_id, user_id):
+        sql = f"""
+        SELECT * FROM {schema}"Participants" WHERE group_id = %s AND user_id = %s;
+        """
+        self.__cursor.execute(sql, (group_id, user_id))
+        rez = self.__cursor.fetchall()
+        return rez
+
+    def get_user_privilege_in_group(self, group_id, user_id):
+        sql = f"""
+        SELECT
+            role
+        FROM
+            {schema}"Participants"
+        WHERE
+            group_id = %s AND user_id = %s;
+        """
+        self.__cursor.execute(sql, (group_id, user_id))
+        rez = self.__cursor.fetchone()
+        return rez.get('role', None)

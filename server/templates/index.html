@@ -5,8 +5,8 @@
 <div>
     <a href="{{ url_for('main.profile', user_id=post.author_id) }}">{{ post.author_username }}</a>
     <p>{{ post.message }}</p>
-    {% if post.post_photos %}
-    <img src="data:image/jpeg;base64,{{ post.post_photos | b64encode }}" width="256" height="256">
+    {% if post.post_photo %}
+    <img src="data:image/jpeg;base64,{{ post.post_photo | b64encode }}" width="256" height="256">
     {% endif %}
 </div>
 {% endfor %}

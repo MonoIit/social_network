@@ -92,10 +92,13 @@ def add_post():
     return render_template('add_post.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
 
-@bp.route('/messanger/chat/<int:group_id>', methods=['GET', 'POST'])
+@bp.route('/messanger/chat/<int:group_id>', methods=['GET'])
 @login_required
 def chat(group_id):
+    if not dbase.find_user_in_group(group_id, current_user.get_id()):
+        return redirect(url_for('main.messanger'))
     group = dbase.get_group_info(group_id)
+    group['role'] = dbase.get_user_privilege_in_group(group_id, current_user.get_id())
     if not group:
         return redirect(url_for('main.messanger'))
     if group['type'] == 'private':
@@ -107,12 +110,9 @@ def chat(group_id):
                            messages=messages)
 
 
-@bp.route('/messanger', methods=['POST', 'GET'])
+@bp.route('/messanger', methods=['GET'])
 @login_required
 def messanger():
-    if request.method == 'POST':
-        ...
-
     chats = dbase.get_user_groups(current_user.get_id())
     return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
 
@@ -161,7 +161,7 @@ def friends():
             group = dbase.find_private_group(current_user.get_id(), profile_id)
             if not group:
                 group = dbase.create_group(name="0", photo_id=None, type="private")
-                dbase.add_user_to_group(current_user.get_id(), group['id'], 'paricipant')
+                dbase.add_user_to_group(current_user.get_id(), group['id'], 'participant')
                 dbase.add_user_to_group(profile_id, group['id'], 'participant')
             session['friends'] = dbase.get_friend_by_id(current_user.get_id())
 
@@ -243,7 +243,9 @@ def create_group():
 @login_required
 def edit_group(group_id):
     group = dbase.get_group_info(group_id)
-
+    group['role'] = dbase.get_user_privilege_in_group(group_id, current_user.get_id())
+    if group['role'] != 'admin':
+        return redirect('main.feed')
     if request.method == 'POST':
         name = request.form.get('name')
         if not name:
@@ -294,7 +296,7 @@ def allowed_file(filename):
 def add_image_and_get_id(image):
     if image and image.filename != '' and allowed_file(image.filename):
         file_data = image.read()
-        return dbase.add_image_and_get_id(name=image.filename, data=file_data)['id']
+        return dbase.add_image_and_get_id(name=image.filename, data=file_data)
 
 
 def check_friendship(user1_id, user2_id):

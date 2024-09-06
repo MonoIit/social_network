@@ -2,7 +2,7 @@
 
 {% block content %}
 
-    <div id="chat{{ group.group_id }}">
+    <div id="chat{{ group.id }}">
     {% for message in messages %}
         <p>{{message.username}}: {{message.content}}</p>
     {% endfor %}
@@ -10,7 +10,7 @@
     <p>
         <form id="messageForm" method="post">
             <input type="hidden" id="user" name="user" value="{{ current_user.get_username() }}">
-            <input type="hidden" id="group_id" name="group_id" value="{{ group.group_id }}">
+            <input type="hidden" id="group_id" name="group_id" value="{{ group.id }}">
             <input id="message" name="message" type="text" placeholder="Enter message...">
             <button id="send" type="submit">Send</button>
         </form>
@@ -18,7 +18,7 @@
     <p>
     {% if group.type == 'public' %}
         {% if group.role == 'admin' %}
-        <a href="{{ url_for('main.edit_group', group_id=group.group_id) }}">редактировать группу</a>
+        <a href="{{ url_for('main.edit_group', group_id=group.id) }}">редактировать группу</a>
         {% endif %}
     {% endif %}
     </p>
@@ -30,12 +30,12 @@
 
     // Присоединение к комнате при подключении
     socket.on('connect', function() {
-        socket.emit('join', { 'username': '{{ current_user.get_username() }}', 'group_id': '{{ group.group_id }}' });
+        socket.emit('join', { 'username': '{{ current_user.get_username() }}', 'group_id': '{{ group.id }}' });
     });
 
     // Обработка получения сообщения
     socket.on('message', function(msg) {
-        var chat = document.getElementById('chat{{ group.group_id }}');
+        var chat = document.getElementById('chat{{ group.id }}');
         var p = document.createElement('p');
         p.innerHTML = msg;
         chat.appendChild(p);

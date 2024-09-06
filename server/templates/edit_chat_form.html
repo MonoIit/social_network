@@ -13,6 +13,17 @@
         </p>
         <p><input id="imageInput" accept="image/*" type="file" name="image" value="добавить фото"></p>
     <p><label>Название группы:</label> <input type="text" name="name" value="{{ group.name }}"></p>
+    <p>Пользователи:</p>
+    {% for participant in participants %}
+        <div id="{{ participant.id }}">
+            <p>{% if participant.photo %}
+                <img src="data:image/jpeg;base64,{{ participant.photo | b64encode }}" width="32" height="32">
+                {% endif %}
+                <a href="{{ url_for('main.profile', user_id=participant.id) }}">{{ participant.username }}</a>
+                <a></a>
+            </p>
+        </div>
+    {% endfor %}
     <p><input type="submit" value="Обновить"></p>
     {% for msg in get_flashed_messages() %}{{msg}}{% endfor %}
 </form>
