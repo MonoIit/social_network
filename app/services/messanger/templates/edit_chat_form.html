@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<form action="{{ url_for('main.edit_group', group_id=group.id) }}" method="post" class="form-contact" enctype="multipart/form-data">
+<form action="{{ url_for('messanger_bp.edit_group', group_id=group.id) }}" method="post" class="form-contact" enctype="multipart/form-data">
     <input type="hidden" name="user_id" value="{{ current_user.get_id() }}">
     <p><label>Фото:</label></p>
         <p>
@@ -19,7 +19,7 @@
             <p>{% if participant.photo %}
                 <img src="data:image/jpeg;base64,{{ participant.photo | b64encode }}" width="32" height="32">
                 {% endif %}
-                <a href="{{ url_for('main.profile', user_id=participant.id) }}">{{ participant.username }}</a>
+                <a href="{{ url_for('friends_bp.profile', user_id=participant.id) }}">{{ participant.username }}</a>
                 <a></a>
             </p>
         </div>

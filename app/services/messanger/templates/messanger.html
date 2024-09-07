@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<a href="{{ url_for('main.create_group') }}">Создать чат</a>
+<a href="{{ url_for('messanger_bp.create_group') }}">Создать чат</a>
 <ul>
     {% for chat in chats %}
     <li>
         <div>
             {% if False %}<img src="data:image/jpeg;base64,{{ chat.photo | b64encode }}" width="32" height="32">{%
             endif %}<a href="{{
-url_for('main.chat', group_id=chat.id) }}">{{chat.name}}</a>
+url_for('messanger_bp.chat', group_id=chat.id) }}">{{chat.name}}</a>
         </div>
     </li>
     {% endfor %}

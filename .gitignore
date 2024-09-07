@@ -20,6 +20,6 @@ migrations/versions/__pycache__/4733f961b780_.cpython-312.pyc
 migrations/versions/__pycache__/5fe4c69396a6_.cpython-312.pyc
 migrations/versions/__pycache__/6c2a04a53c10_.cpython-312.pyc
 migrations/versions/__pycache__/706dd256a171_.cpython-312.pyc
-server/__pycache__/__init__.cpython-312.pyc
-server/__pycache__/models.cpython-312.pyc
-server/__pycache__/routes.cpython-312.pyc
+app/__pycache__/__init__.cpython-312.pyc
+app/__pycache__/models.cpython-312.pyc
+app/__pycache__/routes.cpython-312.pyc

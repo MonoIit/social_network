@@ -10,8 +10,8 @@
     {% for friend in friends %}
     <li>
         <p>
-        <a href="{{ url_for('main.profile', user_id=friend['id']) }}">{{friend['username']}}</a>
-        <form action="{{ url_for('main.friends') }}" method="post">
+        <a href="{{ url_for('friends_bp.profile', user_id=friend['id']) }}">{{friend['username']}}</a>
+        <form action="{{ url_for('friends_bp.friends') }}" method="post">
         <input type="hidden" name="user_id" value="{{ friend['id'] }}">
         {% if friend['status'] == 'received' %}
         Хочет добавить вас в друзья
@@ -20,7 +20,7 @@
         {% elif friend['status'] == 'sent' %}
         Ожидает поддверждения
         {% elif friend['status'] == 'confirmed' %}
-        <a href="{{ url_for('main.chat', group_id=friend.group_id) }}">Сообщение</a>
+        <a href="{{ url_for('messanger_bp.chat', group_id=friend.group_id) }}">Сообщение</a>
         {% endif %}
         </form>
     </li>
