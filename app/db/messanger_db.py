@@ -1,3 +1,5 @@
+from flask import session
+
 from app.db.PostgresDB import PostgresDB
 
 db = PostgresDB()
@@ -84,8 +86,13 @@ def get_ten_last_messages(group_id):
 def get_group_participants(group_id):
     sql = f"""
     SELECT
-        user_id
-    FROM {db.schema}"Participants"
+        p.user_id as id,
+        p.role,
+        u.username,
+        ph.data as photo
+    FROM {db.schema}"Participants" p
+    JOIN {db.schema}"Users" u ON p.user_id = u.id
+    LEFT JOIN {db.schema}"Photos" ph ON u.photo_id = ph.id
     WHERE
         group_id = %s;
     """
@@ -135,4 +142,20 @@ def find_user_in_group(group_id, user_id):
     return rez
 
 
-
+def get_friends_not_in_group(group_id, user_id):
+    sql = f"""
+    SELECT 
+        f.friend_id AS id,
+        p.role,
+        u.username,
+		ph.data as photo
+    FROM {db.schema}"Friends" f
+    LEFT JOIN {db.schema}"Participants" p ON p.user_id = f.friend_id AND p.group_id = %s
+    JOIN {db.schema}"Users" u ON f.friend_id = u.id
+	LEFT JOIN {db.schema}"Photos" ph ON u.photo_id = ph.id
+    WHERE f.user_id = %s
+        AND f.status = 'confirmed'
+        AND p.role IS NULL;
+    """
+    rez = db.fetch_all(sql, (group_id, user_id))
+    return rez

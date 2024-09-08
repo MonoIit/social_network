@@ -22,7 +22,6 @@ def login():
         if existing_user and check_password_hash(existing_user['password'], password):
             userlogin = UserLogin().create(existing_user)
             login_user(userlogin)
-            session['friends'] = shared_db.get_friends_by_id(current_user.id)
             return redirect(url_for('feed_bp.feed'))
         else:
             flash('Неверный пользователь или пароль')

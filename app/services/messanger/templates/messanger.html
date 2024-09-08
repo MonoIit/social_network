@@ -6,7 +6,7 @@
     {% for chat in chats %}
     <li>
         <div>
-            {% if False %}<img src="data:image/jpeg;base64,{{ chat.photo | b64encode }}" width="32" height="32">{%
+            {% if chat.photo %}<img src="data:image/jpeg;base64,{{ chat.photo | b64encode }}" width="32" height="32">{%
             endif %}<a href="{{
 url_for('messanger_bp.chat', group_id=chat.id) }}">{{chat.name}}</a>
         </div>

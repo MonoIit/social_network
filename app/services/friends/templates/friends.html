@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<a href="add_friend">Найти друга</a>
+<a href="{{ url_for('friends_bp.add_friend') }}">Найти друга</a>
 <form>
     <input type="text" class="input-field" placeholder="Search friend...">
 </form>
@@ -10,6 +10,9 @@
     {% for friend in friends %}
     <li>
         <p>
+        {% if friend.photo %}
+        <img src="data:image/jpeg;base64,{{ friend.photo | b64encode }}" width="32" height="32">
+        {% endif %}
         <a href="{{ url_for('friends_bp.profile', user_id=friend['id']) }}">{{friend['username']}}</a>
         <form action="{{ url_for('friends_bp.friends') }}" method="post">
         <input type="hidden" name="user_id" value="{{ friend['id'] }}">

@@ -1,13 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for
 from flask_login import login_required, current_user
-from app.db.PostgresDB import PostgresDB
 from .tools.tools import menu, side_menu
 
 bp = Blueprint('main', __name__)
-
-
-dbase = PostgresDB()
-
 
 
 @bp.route('/')

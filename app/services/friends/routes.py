@@ -1,4 +1,4 @@
-from flask import request, flash, render_template, session, abort
+from flask import request, flash, render_template, abort
 from flask_login import login_required, current_user
 
 from app.db import friends_db, shared_db
@@ -15,7 +15,6 @@ def friends():
         if request.form['action'] == "Отклонить":
             friends_db.delete_friendship(user_id=current_user.get_id(), friend_id=profile_id)
             friends_db.delete_friendship(user_id=profile_id, friend_id=current_user.get_id())
-            session['friends'] = shared_db.get_friends_by_id(current_user.get_id())
         elif request.form['action'] == "Принять":
             friends_db.confirm_friendship(user_id=current_user.get_id(), friend_id=profile_id)
             friends_db.confirm_friendship(user_id=profile_id, friend_id=current_user.get_id())
@@ -24,9 +23,8 @@ def friends():
                 group = shared_db.create_group(name="0", photo_id=None, type="private")
                 shared_db.add_user_to_group(current_user.get_id(), group['id'], 'participant')
                 shared_db.add_user_to_group(profile_id, group['id'], 'participant')
-            session['friends'] = shared_db.get_friends_by_id(current_user.get_id())
 
-    friends = session.get('friends', [])
+    friends = shared_db.get_friends_by_id(current_user.id)
     return render_template('friends.html', menu=menu, side_menu=side_menu, friends=friends, current_user=current_user)
 
 
@@ -69,7 +67,6 @@ def profile(user_id):
                     shared_db.add_user_to_group(current_user.get_id(), id, 'paricipant')
                     shared_db.add_user_to_group(user_id, id, 'participant')
 
-            session['friends'] = shared_db.get_friends_by_id(current_user.get_id())
         else:
             profile_id = current_user.get_id()
             image = request.files['image']

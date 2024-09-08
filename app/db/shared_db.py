@@ -1,5 +1,6 @@
 from app.db.PostgresDB import PostgresDB
 
+
 db = PostgresDB()
 
 
@@ -97,6 +98,7 @@ def get_friends_by_id(from_user_id):
         uf.friend_id as id,
         uf.username,
         uf.status,
+        uf.photo,
         pg.group_id
     FROM UserFriends uf
     LEFT JOIN PrivateGroups pg ON pg.user_id = uf.friend_id;

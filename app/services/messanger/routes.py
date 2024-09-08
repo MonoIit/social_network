@@ -1,4 +1,3 @@
-
 from flask import render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
 from flask_socketio import join_room, send, SocketIO
@@ -12,7 +11,7 @@ from app.tools.tools import menu, side_menu
 socketio = SocketIO()
 
 
-@messanger_bp.route('/messanger/chat/<int:group_id>', methods=['GET'])
+@messanger_bp.route('/messanger/<int:group_id>/chat', methods=['GET'])
 @login_required
 def chat(group_id):
     if not messanger_db.find_user_in_group(group_id, current_user.get_id()):
@@ -23,7 +22,7 @@ def chat(group_id):
         return redirect(url_for('messanger_bp.messanger'))
     if group['type'] == 'private':
         user1, user2 = messanger_db.get_group_participants(group_id)
-        if not tools.check_friendship(user1['user_id'], user2['user_id']):
+        if not tools.check_friendship(user1['id'], user2['id']):
             return redirect(url_for('messanger_bp.messanger'))
     messages = messanger_db.get_ten_last_messages(group_id)
     return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group,
@@ -37,7 +36,7 @@ def messanger():
     return render_template('messanger.html', menu=menu, side_menu=side_menu, current_user=current_user, chats=chats)
 
 
-@messanger_bp.route('/group/construct', methods=['GET', 'POST'])
+@messanger_bp.route('/messanger/construct', methods=['GET', 'POST'])
 @login_required
 def create_group():
     if request.method == 'POST':
@@ -56,7 +55,7 @@ def create_group():
     return render_template('create_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
 
-@messanger_bp.route('/group/edit/<int:group_id>', methods=['GET', 'POST'])
+@messanger_bp.route('/messanger/<int:group_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_group(group_id):
     group = messanger_db.get_group_info(group_id)
@@ -78,7 +77,29 @@ def edit_group(group_id):
                 flash("Произошла ошибка")
                 print(f"[!] Error: {e}")
 
-    return render_template('edit_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group)
+    participants = messanger_db.get_group_participants(group_id)
+
+    return render_template('edit_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group, participants=participants)
+
+@messanger_bp.route('/messanger/<int:group_id>/invite', methods=['GET', 'POST'])
+@login_required
+def invite(group_id):
+    group = messanger_db.get_group_info(group_id)
+    group['role'] = messanger_db.get_user_privilege_in_group(group_id, current_user.get_id())
+    if group['role'] != 'admin':
+        return redirect(url_for('feed_bp.feed'))
+
+    if request.method == 'POST':
+        user_id = request.form.get('user_id')
+
+        try:
+            shared_db.add_user_to_group(user_id, group_id,'participant')
+        except Exception as e:
+            print(f"[!] Error: {e}")
+
+    friends_not_in_group = messanger_db.get_friends_not_in_group(group_id, current_user.get_id())
+    return render_template('invite_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group, friends=friends_not_in_group)
+
 
 
 @socketio.on('connect')

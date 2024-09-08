@@ -14,7 +14,7 @@ class UserLogin(UserMixin):
         return UserLogin(user_data)
 
     def get_id(self):
-        return str(self.id)  # Flask-Login требует, чтобы id было строкой
+        return str(self.id)
 
     def get_username(self):
         return self.username

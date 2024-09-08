@@ -38,7 +38,8 @@ class PostgresDB:
         :return: Словарь с данными строки.
         """
         self.execute_query(query, params)
-        return self.__cursor.fetchone()
+        rez = self.__cursor.fetchone()
+        return rez if rez else None
 
     def fetch_all(self, query, params=None):
         """
@@ -48,7 +49,8 @@ class PostgresDB:
         :return: Список словарей с данными строк.
         """
         self.execute_query(query, params)
-        return self.__cursor.fetchall()
+        rez = self.__cursor.fetchall()
+        return rez if rez else []
 
     def close(self):
         """
