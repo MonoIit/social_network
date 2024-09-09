@@ -8,7 +8,7 @@
     <img src="data:image/jpeg;base64,{{ friend.photo | b64encode }}" width="32" height="32">
     {% endif %}
     <a href="{{ url_for('friends_bp.profile', user_id=friend['id']) }}">{{friend['username']}}</a>
-    <form action="{{ url_for('messanger_bp.invite', group_id=group.id) }}" method="post">
+    <form action="{{ url_for('messanger_bp.invite_participant', group_id=group.id) }}" method="post">
     <input type="hidden" name="user_id" value="{{ friend['id'] }}">
     <input type="submit" name="invite" value="Пригласить">
     </form>

@@ -1,21 +1,22 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<form action="{{ url_for('messanger_bp.edit_group', group_id=group.id) }}" method="post" class="form-contact" enctype="multipart/form-data">
+<form action="{{ url_for('messanger_bp.edit_group', group_id=group.id) }}" method="post" enctype="multipart/form-data">
     <input type="hidden" name="user_id" value="{{ current_user.get_id() }}">
     <p><label>Фото:</label></p>
-        <p>
+    <p>
         {% if group.photo %}
         <img id="previewImg" src="data:image/jpeg;base64,{{ group.photo | b64encode }}" width="64" height="64">
         {% else %}
         <img id="previewImg" src="" width="64" height="64">
         {% endif %}
-        </p>
-        <p><input id="imageInput" accept="image/*" type="file" name="image" value="добавить фото"></p>
+    </p>
+    <p><input id="imageInput" accept="image/*" type="file" name="image" value="добавить фото"></p>
     <p><label>Название группы:</label> <input type="text" name="name" value="{{ group.name }}"></p>
-    <p><input type="submit" value="Обновить"></p>
+    <p><input type="submit" name="action" value="Обновить"></p>
+</form>
     {% for msg in get_flashed_messages() %}{{msg}}{% endfor %}
-    <a href="{{ url_for('messanger_bp.invite', group_id=group.id) }}">Добавить пользователя</a>
+    <a href="{{ url_for('messanger_bp.invite_participant', group_id=group.id) }}">Добавить пользователя</a>
     <p>Пользователи:</p>
     <ul>
     {% for participant in participants %}
@@ -25,10 +26,31 @@
         {% endif %}
         <a href="{{ url_for('friends_bp.profile', user_id=participant['id']) }}">{{participant['username']}}</a>
         {{ participant.role }}
+
+        <!-- Форма "Исключить" -->
+        {% if participant.id != current_user.get_int_id() %}
+        <form action="{{ url_for('messanger_bp.remove_participant', group_id=group.id) }}" method="post" style="display:inline">
+          <input type="hidden" name="user_id" value="{{ participant.id }}">
+          <input type="submit" name="action" value="Исключить">
+        </form>
+
+        <!-- Форма "Передать роль" -->
+        <form action="{{ url_for('messanger_bp.transfer_role', group_id=group.id) }}" method="post" style="display:inline">
+          <input type="hidden" name="user_id" value="{{ participant.id }}">
+          <input type="submit" name="action" value="Передать роль">
+        </form>
+
+        <!-- Форма "Выйти" -->
+        {% elif participant.id == current_user.get_int_id() %}
+        <form action="{{ url_for('messanger_bp.quit_from_group', group_id=group.id) }}" method="post" style="display:inline">
+          <input type="hidden" name="user_id" value="{{ participant.id }}">
+          <input type="submit" name="action" value="Выйти">
+        </form>
+        {% endif %}
       </li>
     {% endfor %}
     </ul>
-</form>
+
 
 <script>
 document.getElementById('imageInput').addEventListener('change', function(event) {

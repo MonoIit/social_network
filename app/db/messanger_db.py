@@ -5,6 +5,40 @@ from app.db.PostgresDB import PostgresDB
 db = PostgresDB()
 
 
+def remove_participant(group_id, user_id):
+    sql = f"""
+    DELETE FROM 
+        {db.schema}"Participants"
+    WHERE 
+        group_id = %s AND user_id = %s;
+    """
+    db.execute_query(sql, (group_id, user_id))
+
+
+def lose_admin(group_id, user_id):
+    sql = f"""
+    UPDATE
+        {db.schema}"Participants"
+    SET
+        role = 'participant'
+    WHERE
+        group_id = %s AND user_id = %s; 
+    """
+    db.execute_query(sql, (group_id, user_id))
+
+
+def make_admin(group_id, user_id):
+    sql = f"""
+        UPDATE
+            {db.schema}"Participants"
+        SET
+            role = 'admin'
+        WHERE
+            group_id = %s AND user_id = %s; 
+        """
+    db.execute_query(sql, (group_id, user_id))
+
+
 def add_message(group_id, user_id, content):
     sql = f"""
     INSERT INTO {db.schema}"Messages"
@@ -159,3 +193,26 @@ def get_friends_not_in_group(group_id, user_id):
     """
     rez = db.fetch_all(sql, (group_id, user_id))
     return rez
+
+
+def get_first_added_user(group_id, user_id):
+    sql = f"""
+    SELECT
+        user_id 
+    FROM {db.schema}"Participants"
+    WHERE group_id = %s AND user_id != %s
+    ORDER BY created_at ASC
+    LIMIT 1;
+    """
+    rez = db.fetch_one(sql, (group_id, user_id))
+    return rez
+
+
+def delete_group(group_id):
+    sql = f"""
+    DELETE FROM
+        {db.schema}"Groups"
+    WHERE
+        id = %s;
+    """
+    db.execute_query(sql, (group_id,))

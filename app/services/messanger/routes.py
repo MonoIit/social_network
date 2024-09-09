@@ -83,7 +83,7 @@ def edit_group(group_id):
 
 @messanger_bp.route('/messanger/<int:group_id>/invite', methods=['GET', 'POST'])
 @login_required
-def invite(group_id):
+def invite_participant(group_id):
     group = messanger_db.get_group_info(group_id)
     group['role'] = messanger_db.get_user_privilege_in_group(group_id, current_user.get_id())
     if group['role'] != 'admin':
@@ -99,6 +99,60 @@ def invite(group_id):
 
     friends_not_in_group = messanger_db.get_friends_not_in_group(group_id, current_user.get_id())
     return render_template('invite_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group, friends=friends_not_in_group)
+
+
+@messanger_bp.route('/messanger/<int:group_id>/remove', methods=['POST'])
+@login_required
+def remove_participant(group_id):
+    user_id = request.form.get('user_id')
+
+    if user_id:
+        try:
+            messanger_db.remove_participant(group_id, user_id)
+        except Exception as e:
+            print(f"[!] Error: {e}")
+    return redirect(url_for('messanger_bp.edit_group', group_id=group_id))
+
+
+
+@messanger_bp.route('/messanger/<int:group_id>/transfer', methods=['POST'])
+@login_required
+def transfer_role(group_id):
+    user_id = request.form.get('user_id')
+
+    try:
+        messanger_db.lose_admin(group_id, current_user.get_id())
+        messanger_db.make_admin(group_id, user_id)
+    except Exception as e:
+        print(f"[!] Error: {e}")
+    return redirect(url_for('messanger_bp.chat', group_id=group_id))
+
+
+@messanger_bp.route('/messanger/<int:group_id>/quit', methods=['POST'])
+@login_required
+def quit_from_group(group_id):
+    user_id = request.form.get('user_id')
+
+    # Ищем самого первого пользователя (исключая админа) в группе
+    first_added_user = messanger_db.get_first_added_user(group_id, user_id)
+
+    # Если есть хоть один пользователь, то передаём полномочия самому первому в группе
+    if first_added_user:
+        try:
+            messanger_db.lose_admin(group_id, user_id)
+            messanger_db.make_admin(group_id, first_added_user['user_id'])
+            messanger_db.remove_participant(group_id, user_id)
+        except Exception as e:
+            print(f"[!] Error: {e}")
+    # Иначе удаляем группу
+    else:
+        try:
+            messanger_db.delete_group(group_id)
+        except Exception as e:
+            print(f"[!] Error: {e}")
+    return redirect(url_for('messanger_bp.messanger'))
+
+
 
 
 

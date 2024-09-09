@@ -105,3 +105,5 @@ def get_friends_by_id(from_user_id):
     """
     rez = db.fetch_all(sql, (from_user_id, from_user_id))
     return rez
+
+
