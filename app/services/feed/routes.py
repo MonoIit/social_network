@@ -1,9 +1,10 @@
 from flask import render_template, request, flash
 from flask_login import login_required, current_user
 
-from app.db import feed_db, shared_db
+
 from app.services.feed import feed_bp
-from app.tools.tools import menu, side_menu
+from app.methods import feed_db, shared_db
+from app.tools import menu, side_menu, add_image_and_get_id
 
 
 @feed_bp.route('/feed')
@@ -24,7 +25,7 @@ def add_post():
             flash('Напишите хоть что-нибудь или загрузите изображение')
         else:
             image = request.files['image']
-            image_id = shared_db.add_image_and_get_id(image)
+            image_id = add_image_and_get_id(image)
 
             feed_db.create_post(author_id, message, image_id)
             flash('Пост опубликован!')

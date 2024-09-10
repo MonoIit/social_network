@@ -1,7 +1,9 @@
-from app.db.PostgresDB import PostgresDB
 
+db = None
 
-db = PostgresDB()
+def init_db(database):
+    global db
+    db = database
 
 
 def add_user_to_group(user_id, group_id, role):
@@ -79,7 +81,7 @@ def get_friends_by_id(from_user_id):
             p.data as photo
         FROM {db.schema}"Friends" f
         JOIN {db.schema}"Users" u ON f.friend_id = u.id
-        LEFT JOIN sn."Photos" p ON u.photo_id = p.id
+        LEFT JOIN {db.schema}"Photos" p ON u.photo_id = p.id
         WHERE (f.user_id = %s)
     ),
     PrivateGroups AS (

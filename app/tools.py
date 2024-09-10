@@ -1,5 +1,4 @@
-from app.db import shared_db
-
+from app.methods import shared_db
 
 menu = [
     {'title': 'Добавить пост', 'url': "feed_bp.add_post"}

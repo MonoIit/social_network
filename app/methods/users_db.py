@@ -1,8 +1,9 @@
-from app.db.PostgresDB import PostgresDB
-from app.db.PostgresDB import schema
 
-db = PostgresDB()
+db = None
 
+def init_db(database):
+    global db
+    db = database
 
 def get_user_by_username(username):
     sql = f"""
@@ -22,7 +23,7 @@ def get_user_by_username(username):
 
 def create_user(username, email, password, photo_id):
     sql = f"""
-    INSERT INTO {schema}"Users" 
+    INSERT INTO {db.schema}"Users" 
         (username,
         email,
         password,

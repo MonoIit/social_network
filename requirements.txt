@@ -1,4 +1,8 @@
-flask
-flask-login
-flask-socketio
-psycopg2-binary
+flask~=3.0.3
+flask-login~=0.6.3
+flask-socketio~=5.3.7
+psycopg2-binary~=2.9.9
+Werkzeug~=3.0.4
+python-dotenv~=1.0.1
+gunicorn
+eventlet

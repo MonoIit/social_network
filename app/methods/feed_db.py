@@ -1,7 +1,9 @@
-from app.db.PostgresDB import PostgresDB
 
-db = PostgresDB()
+db = None
 
+def init_db(database):
+    global db
+    db = database
 
 def get_posts():
     sql = f"""

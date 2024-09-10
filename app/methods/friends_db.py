@@ -1,7 +1,9 @@
-from app.db.PostgresDB import PostgresDB
 
-db = PostgresDB()
+db = None
 
+def init_db(database):
+    global db
+    db = database
 
 def update_profile_photo(user_id, photo_id):
     sql = f"""
@@ -46,11 +48,11 @@ def find_private_group(user1_id, user2_id):
         p2.user_id AS user2_id,
         g.id as group_id
     FROM 
-        sn."Participants" p1
+        {db.schema}"Participants" p1
     JOIN 
-        sn."Participants" p2 ON p1.group_id = p2.group_id  -- Соединяем пользователей по group_id
+        {db.schema}"Participants" p2 ON p1.group_id = p2.group_id  -- Соединяем пользователей по group_id
     JOIN 
-        sn."Groups" g ON p1.group_id = g.id  -- Присоединяем информацию о группе
+        {db.schema}"Groups" g ON p1.group_id = g.id  -- Присоединяем информацию о группе
     WHERE 
         g.type = 'private'  -- Фильтруем только группы типа 'private'
         AND p1.user_id = %s AND p2.user_id = %s;

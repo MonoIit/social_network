@@ -1,10 +1,9 @@
 from flask import request, flash, render_template, abort
 from flask_login import login_required, current_user
 
-from app.db import friends_db, shared_db
 from app.services.friends import friends_bp
-from app.tools import tools
-from app.tools.tools import menu, side_menu
+from app.methods import friends_db, shared_db
+from app.tools import menu, side_menu, add_image_and_get_id
 
 
 @friends_bp.route('/friends', methods=['POST', 'GET'])
@@ -69,9 +68,12 @@ def profile(user_id):
 
         else:
             profile_id = current_user.get_id()
-            image = request.files['image']
-            image_id = tools.add_image_and_get_id(image)
-            friends_db.update_profile_photo(user_id=profile_id, photo_id=image_id)
+            image = request.files.get('image')
+            if image:
+                image_id = add_image_and_get_id(image)
+                friends_db.update_profile_photo(user_id=profile_id, photo_id=image_id)
+            else:
+                flash("Вы не загрузили фото!")
 
     friendship = shared_db.find_friendship(current_user.get_id(), user_id)
 

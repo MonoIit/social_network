@@ -4,9 +4,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.UserLogin import UserLogin
 from app.services.auth import auth_bp
-from app.db import users_db, shared_db
-from app.tools import tools
-from app.tools.tools import menu, side_menu
+from app.methods import users_db
+import app.tools as tools
+from app.tools import menu, side_menu
 
 
 
@@ -37,17 +37,19 @@ def registration():
         username = request.form['username']
         password = request.form['password']
         email = request.form['email']
-
-        existing_user = users_db.get_user_by_username(username)
-        if existing_user:
-            flash('Этот пользователь уже существует')
+        if not username or not password or not email:
+            flash('Заполните все данные!')
         else:
-            image = request.files['image']
-            image_id = tools.add_image_and_get_id(image)
+            existing_user = users_db.get_user_by_username(username)
+            if existing_user:
+                flash('Этот пользователь уже существует')
+            else:
+                image = request.files['image']
+                image_id = tools.add_image_and_get_id(image)
 
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+                hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
 
-            users_db.create_user(username=username, password=hashed_password, email=email, photo_id=image_id)
+                users_db.create_user(username=username, password=hashed_password, email=email, photo_id=image_id)
             return redirect(url_for('feed_bp.feed'))
 
     return render_template('registration.html', menu=menu, side_menu=side_menu, current_user=current_user)

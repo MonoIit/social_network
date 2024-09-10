@@ -8,7 +8,7 @@
     {% else %}
     <form action="{{ url_for('friends_bp.profile', user_id=current_user.get_id()) }}" class="form-contact" method="post">
         <p><label>Фото:</label> <input type="file" name="image" value="добавить фото"></p>
-        <input type="submit" value="Добавить">
+        <input type="submit" value="Обновить">{% for e in get_flashed_messages() %}{{e}}{% endfor %}
     </form>
     {% endif %}
 {% else %}

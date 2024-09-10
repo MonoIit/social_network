@@ -1,9 +1,9 @@
-from flask import session
 
-from app.db.PostgresDB import PostgresDB
+db = None
 
-db = PostgresDB()
-
+def init_db(database):
+    global db
+    db = database
 
 def remove_participant(group_id, user_id):
     sql = f"""
@@ -74,9 +74,9 @@ def get_user_groups(user_id):
             g.type AS type,
             ph.data AS photo,
             p.user_id AS user_id  -- Пользователь, участвующий в группе
-        FROM sn."Groups" g
-        JOIN sn."Participants" p ON g.id = p.group_id AND g.type = 'public'
-        LEFT JOIN sn."Photos" ph ON g.photo_id = ph.id
+        FROM {db.schema}"Groups" g
+        JOIN {db.schema}"Participants" p ON g.id = p.group_id AND g.type = 'public'
+        LEFT JOIN {db.schema}"Photos" ph ON g.photo_id = ph.id
         WHERE p.user_id = %s
     ),
     PrivateGroups AS (
@@ -87,11 +87,11 @@ def get_user_groups(user_id):
             g.type as type,
             ph.data as photo,
             p1.user_id as user_id
-        FROM sn."Participants" p1
-        JOIN sn."Participants" p2 ON p1.group_id = p2.group_id AND p1.user_id = %s AND p2.user_id <> %s
-        JOIN sn."Groups" g ON p1.group_id = g.id AND g.type = 'private'
-        JOIN sn."Users" u ON p2.user_id = u.id
-        LEFT JOIN sn."Photos" ph ON u.photo_id = ph.id
+        FROM {db.schema}"Participants" p1
+        JOIN {db.schema}"Participants" p2 ON p1.group_id = p2.group_id AND p1.user_id = %s AND p2.user_id <> %s
+        JOIN {db.schema}"Groups" g ON p1.group_id = g.id AND g.type = 'private'
+        JOIN {db.schema}"Users" u ON p2.user_id = u.id
+        LEFT JOIN {db.schema}"Photos" ph ON u.photo_id = ph.id
     )
     SELECT * FROM PrivateGroups
     UNION ALL

@@ -1,14 +1,13 @@
 from flask import render_template, redirect, url_for, request, flash
 from flask_login import login_required, current_user
-from flask_socketio import join_room, send, SocketIO
+from flask_socketio import join_room, send
 
-from app.db import messanger_db, shared_db
+
 from app.services.messanger import messanger_bp
-from app.tools import tools
-from app.tools.tools import menu, side_menu
+from app.methods import messanger_db, shared_db
+from app.tools import menu, side_menu, check_friendship, add_image_and_get_id
+from app.app_socket import socketio
 
-
-socketio = SocketIO()
 
 
 @messanger_bp.route('/messanger/<int:group_id>/chat', methods=['GET'])
@@ -22,7 +21,7 @@ def chat(group_id):
         return redirect(url_for('messanger_bp.messanger'))
     if group['type'] == 'private':
         user1, user2 = messanger_db.get_group_participants(group_id)
-        if not tools.check_friendship(user1['id'], user2['id']):
+        if not check_friendship(user1['id'], user2['id']):
             return redirect(url_for('messanger_bp.messanger'))
     messages = messanger_db.get_ten_last_messages(group_id)
     return render_template('chat.html', menu=menu, side_menu=side_menu, current_user=current_user, group=group,
@@ -40,17 +39,20 @@ def messanger():
 @login_required
 def create_group():
     if request.method == 'POST':
-        name = request.form['name']
-        image = request.files['image']
-        try:
-            image_id = tools.add_image_and_get_id(image)
-            group = shared_db.create_group(name, image_id, 'public')
-            shared_db.add_user_to_group(current_user.get_id(), group['id'], 'admin')
-            return redirect(url_for('messanger_bp.chat', group_id=group['id']))
-        except Exception as e:
-            flash('Возникла ошибка при создании группы')
-            print(f"[!] Error: {e}")
-            return redirect(url_for('messanger_bp.create_group'))
+        name = request.form.get('name')
+        if not name:
+            flash("Введите название группы!")
+        else:
+            image = request.files.get('image')
+            try:
+                image_id = add_image_and_get_id(image)
+                group = shared_db.create_group(name, image_id, 'public')
+                shared_db.add_user_to_group(current_user.get_id(), group['id'], 'admin')
+                return redirect(url_for('messanger_bp.chat', group_id=group['id']))
+            except Exception as e:
+                flash('Возникла ошибка при создании группы')
+                print(f"[!] Error: {e}")
+                return redirect(url_for('messanger_bp.create_group'))
 
     return render_template('create_chat_form.html', menu=menu, side_menu=side_menu, current_user=current_user)
 
@@ -68,7 +70,7 @@ def edit_group(group_id):
             flash('Введите название группы')
         else:
             image = request.files['image']
-            image_id = tools.add_image_and_get_id(image) if image else group['photo_id']
+            image_id = add_image_and_get_id(image) if image else group['photo_id']
 
             try:
                 messanger_db.update_group(group_id, name, image_id)
